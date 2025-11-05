@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Portal - Attendance System</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+    <style>
+        .student-card {
+            transition: all 0.3s ease;
+            border-left: 4px solid #0d6efd;
+        }
+        .student-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        .progress {
+            height: 20px;
+        }
+        .attendance-table th {
+            position: sticky;
+            top: 0;
+            background-color: #f8f9fa;
+            z-index: 10;
+        }
+        .stats-card {
+            transition: all 0.3s ease;
+        }
+        .stats-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        .login-container {
+            max-width: 500px;
+            margin: 0 auto;
+            padding: 2rem;
+            border-radius: 10px;
+            background: white;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        .student-details {
+            display: none;
+        }
+        .attendance-history {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .present-badge {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .absent-badge {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+        }
+        .custom-toast {
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            border-left: 5px solid;
+        }
+        .toast-success {
+            border-left-color: #198754;
+        }
+        .toast-error {
+            border-left-color: #dc3545;
+        }
+        .toast-warning {
+            border-left-color: #ffc107;
+        }
+        .toast-info {
+            border-left-color: #0dcaf0;
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <i class="bi bi-person-check-fill me-2"></i>Student Portal
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="admin.html">
+                            <i class="bi bi-person-gear me-1"></i>Teacher
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="view_students.html">
+                            <i class="bi bi-person me-1"></i>Student Portal
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h1 class="h3">
+                        <i class="bi bi-person text-primary me-2"></i>Student Attendance Portal
+                    </h1>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-outline-primary btn-sm" id="refreshBtn">
+                            <i class="bi bi-arrow-clockwise me-1"></i>Refresh
+                        </button>
+                        <button class="btn btn-outline-secondary btn-sm" id="logoutBtn" style="display: none;">
+                            <i class="bi bi-box-arrow-right me-1"></i>Logout
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Roll Number Login Section -->
+        <div class="row justify-content-center" id="loginSection">
+            <div class="col-lg-6">
+                <div class="login-container">
+                    <div class="text-center mb-4">
+                        <i class="bi bi-person-circle text-primary" style="font-size: 3rem;"></i>
+                        <h2 class="mt-2">Student Login</h2>
+                        <p class="text-muted">Enter your roll number to view your attendance details</p>
+                    </div>
+                    
+                    <form id="rollNumberForm">
+                        <div class="mb-3">
+                            <label for="rollNumberInput" class="form-label">Roll Number</label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="bi bi-person-badge"></i>
+                                </span>
+                                <input type="text" class="form-control" id="rollNumberInput" placeholder="Enter your roll number" required>
+                            </div>
+                        </div>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-box-arrow-in-right me-1"></i>View My Attendance
+                            </button>
+                        </div>
+                    </form>
+                    
+                    <div class="mt-4">
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle me-2"></i>
+                            If you don't know your roll number or face any issues, please contact your teacher.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Student Details Section -->
+        <div class="student-details" id="studentDetails">
+            <div class="row">
+                <div class="col-lg-4 mb-4">
+                    <!-- Student Profile Card -->
+                    <div class="card shadow-sm student-card">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="card-title mb-0">
+                                <i class="bi bi-person-circle me-1"></i>Student Profile
+                            </h5>
+                        </div>
+                        <div class="card-body text-center">
+                            <div class="mb-3">
+                                <i class="bi bi-person-badge text-primary" style="font-size: 4rem;"></i>
+                            </div>
+                            <h4 id="studentName" class="mb-1">-</h4>
+                            <p class="text-muted mb-1">Roll No: <span id="studentRoll" class="fw-bold">-</span></p>
+                            <p class="text-muted">Class: <span id="studentClass">-</span></p>
+                        </div>
+                    </div>
+
+                    <!-- Attendance Statistics -->
+                    <div class="card shadow-sm mt-4">
+                        <div class="card-header bg-success text-white">
+                            <h5 class="card-title mb-0">
+                                <i class="bi bi-graph-up me-1"></i>Attendance Summary
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row text-center">
+                                <div class="col-6 mb-3">
+                                    <div class="stats-card">
+                                        <h3 id="presentCount" class="text-success">0</h3>
+                                        <small class="text-muted">Present</small>
+                                    </div>
+                                </div>
+                                <div class="col-6 mb-3">
+                                    <div class="stats-card">
+                                        <h3 id="absentCount" class="text-danger">0</h3>
+                                        <small class="text-muted">Absent</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between mb-1">
+                                    <span>Attendance Percentage</span>
+                                    <span id="attendancePercentage" class="fw-bold">0%</span>
+                                </div>
+                                <div class="progress">
+                                    <div id="attendanceProgress" class="progress-bar" role="progressbar" style="width: 0%"></div>
+                                </div>
+                            </div>
+                            <div class="text-center">
+                                <small class="text-muted" id="attendanceRatio">0/0 Sessions</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-8">
+                    <!-- Attendance History -->
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-info text-white">
+                            <h5 class="card-title mb-0">
+                                <i class="bi bi-calendar-week me-1"></i>Attendance History
+                            </h5>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive attendance-history">
+                                <table class="table table-hover mb-0">
+                                    <thead class="table-light sticky-top">
+                                        <tr>
+                                            <th width="40%">Date</th>
+                                            <th width="30%">Day</th>
+                                            <th width="30%">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="attendanceHistoryBody">
+                                        <!-- Attendance history will be populated here -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Monthly Statistics -->
+                    <div class="card shadow-sm mt-4">
+                        <div class="card-header bg-warning text-white">
+                            <h5 class="card-title mb-0">
+                                <i class="bi bi-bar-chart me-1"></i>Monthly Overview
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row text-center" id="monthlyStats">
+                                <!-- Monthly stats will be populated here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Error Message -->
+        <div class="alert alert-danger mt-4 text-center" id="errorMessage" style="display: none;">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            <span id="errorText"></span>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Firebase SDK -->
+    <script type="module">
+        // Firebase configuration
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
+        import { getDatabase, ref, onValue, get } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDawEjCOeYoFO_vKMWe4HprSC1Aw8LqkD0",
+            authDomain: "attendence-b4514.firebaseapp.com",
+            databaseURL: "https://attendence-b4514-default-rtdb.firebaseio.com",
+            projectId: "attendence-b4514",
+            storageBucket: "attendence-b4514.firebasestorage.app",
+            messagingSenderId: "922020420625",
+            appId: "1:922020420625:web:52452311aad5d8737265b0",
+            measurementId: "G-0L2P4VG6YQ"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const database = getDatabase(app);
+
+        // DOM elements
+        const loginSection = document.getElementById('loginSection');
+        const studentDetails = document.getElementById('studentDetails');
+        const rollNumberForm = document.getElementById('rollNumberForm');
+        const rollNumberInput = document.getElementById('rollNumberInput');
+        const refreshBtn = document.getElementById('refreshBtn');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const errorMessage = document.getElementById('errorMessage');
+        const errorText = document.getElementById('errorText');
+        const toastContainer = document.getElementById('toastContainer');
+
+        // Student details elements
+        const studentName = document.getElementById('studentName');
+        const studentRoll = document.getElementById('studentRoll');
+        const studentClass = document.getElementById('studentClass');
+        const presentCount = document.getElementById('presentCount');
+        const absentCount = document.getElementById('absentCount');
+        const attendancePercentage = document.getElementById('attendancePercentage');
+        const attendanceProgress = document.getElementById('attendanceProgress');
+        const attendanceRatio = document.getElementById('attendanceRatio');
+        const attendanceHistoryBody = document.getElementById('attendanceHistoryBody');
+        const monthlyStats = document.getElementById('monthlyStats');
+
+        // Global variables
+        let students = {};
+        let sessions = {};
+        let attendance = {};
+        let currentStudent = null;
+
+        // Show toast notification
+        function showToast(message, type = 'info', duration = 4000) {
+            const toastId = 'toast-' + Date.now();
+            const icon = getToastIcon(type);
+            
+            const toastHTML = `
+                <div id="${toastId}" class="toast custom-toast toast-${type}" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="toast-header">
+                        ${icon}
+                        <strong class="me-auto">${getToastTitle(type)}</strong>
+                        <small>Just now</small>
+                        <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+                    </div>
+                    <div class="toast-body">
+                        ${message}
+                    </div>
+                </div>
+            `;
+            
+            toastContainer.insertAdjacentHTML('beforeend', toastHTML);
+            const toastElement = document.getElementById(toastId);
+            const toast = new bootstrap.Toast(toastElement, {
+                delay: duration,
+                autohide: true
+            });
+            
+            toast.show();
+            
+            // Remove toast from DOM after it's hidden
+            toastElement.addEventListener('hidden.bs.toast', () => {
+                toastElement.remove();
+            });
+        }
+
+        // Get toast icon based on type
+        function getToastIcon(type) {
+            switch(type) {
+                case 'success':
+                    return '<i class="bi bi-check-circle-fill text-success me-2"></i>';
+                case 'error':
+                    return '<i class="bi bi-x-circle-fill text-danger me-2"></i>';
+                case 'warning':
+                    return '<i class="bi bi-exclamation-triangle-fill text-warning me-2"></i>';
+                case 'info':
+                default:
+                    return '<i class="bi bi-info-circle-fill text-info me-2"></i>';
+            }
+        }
+
+        // Get toast title based on type
+        function getToastTitle(type) {
+            switch(type) {
+                case 'success':
+                    return 'Success';
+                case 'error':
+                    return 'Error';
+                case 'warning':
+                    return 'Warning';
+                case 'info':
+                default:
+                    return 'Information';
+            }
+        }
+
+        // Event listeners
+        rollNumberForm.addEventListener('submit', handleRollNumberSubmit);
+        refreshBtn.addEventListener('click', refreshData);
+        logoutBtn.addEventListener('click', logout);
+
+        // Load data on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadData();
+            
+            // Check if student is already logged in (from session storage)
+            const savedRollNumber = sessionStorage.getItem('studentRollNumber');
+            if (savedRollNumber) {
+                rollNumberInput.value = savedRollNumber;
+                handleRollNumberSubmit(new Event('submit'));
+            }
+        });
+
+        // Handle roll number form submission
+        function handleRollNumberSubmit(e) {
+            e.preventDefault();
+            
+            const rollNumber = rollNumberInput.value.trim();
+            
+            if (!rollNumber) {
+                showError('Please enter your roll number');
+                return;
+            }
+            
+            // Find student by roll number
+            const student = findStudentByRollNumber(rollNumber);
+            
+            if (!student) {
+                showError('No student found with this roll number. Please check your roll number and try again.');
+                return;
+            }
+            
+            // Set current student and display details
+            currentStudent = student;
+            sessionStorage.setItem('studentRollNumber', rollNumber);
+            displayStudentDetails();
+            showToast(`Welcome ${student.name}! Your attendance details are loaded.`, 'success');
+        }
+
+        // Load all data from Firebase
+        function loadData() {
+            const studentsRef = ref(database, 'students');
+            const sessionsRef = ref(database, 'sessions');
+            const attendanceRef = ref(database, 'attendance');
+            
+            // Load students
+            onValue(studentsRef, (snapshot) => {
+                students = snapshot.val() || {};
+                if (currentStudent) {
+                    // Refresh current student data if logged in
+                    const student = findStudentByRollNumber(currentStudent.roll);
+                    if (student) {
+                        currentStudent = student;
+                        displayStudentDetails();
+                    }
+                }
+            });
+            
+            // Load sessions
+            onValue(sessionsRef, (snapshot) => {
+                sessions = snapshot.val() || {};
+                if (currentStudent) {
+                    displayStudentDetails();
+                }
+            });
+            
+            // Load attendance
+            onValue(attendanceRef, (snapshot) => {
+                attendance = snapshot.val() || {};
+                if (currentStudent) {
+                    displayStudentDetails();
+                }
+            });
+        }
+
+        // Find student by roll number
+        function findStudentByRollNumber(rollNumber) {
+            for (const id in students) {
+                if (students[id].roll === rollNumber) {
+                    return {
+                        id: id,
+                        roll: students[id].roll,
+                        name: students[id].name,
+                        className: students[id].className || 'Not specified'
+                    };
+                }
+            }
+            return null;
+        }
+
+        // Display student details
+        function displayStudentDetails() {
+            if (!currentStudent) return;
+            
+            // Hide login section and show student details
+            loginSection.style.display = 'none';
+            studentDetails.style.display = 'block';
+            logoutBtn.style.display = 'block';
+            errorMessage.style.display = 'none';
+            
+            // Update student profile
+            studentName.textContent = currentStudent.name;
+            studentRoll.textContent = currentStudent.roll;
+            studentClass.textContent = currentStudent.className;
+            
+            // Calculate attendance statistics
+            calculateAttendanceStats();
+            
+            // Display attendance history
+            displayAttendanceHistory();
+            
+            // Display monthly statistics
+            displayMonthlyStats();
+        }
+
+        // Calculate attendance statistics
+        function calculateAttendanceStats() {
+            if (!currentStudent) return;
+            
+            const studentId = currentStudent.id;
+            let present = 0;
+            let absent = 0;
+            let totalSessions = Object.keys(sessions).length;
+            
+            // Count present and absent days
+            for (const date in attendance) {
+                if (attendance[date][studentId]) {
+                    if (attendance[date][studentId].present) {
+                        present++;
+                    } else {
+                        absent++;
+                    }
+                }
+            }
+            
+            // Calculate percentage
+            const percentage = totalSessions > 0 ? Math.round((present / totalSessions) * 100) : 0;
+            
+            // Update UI
+            presentCount.textContent = present;
+            absentCount.textContent = absent;
+            attendancePercentage.textContent = `${percentage}%`;
+            attendanceRatio.textContent = `${present}/${totalSessions} Sessions`;
+            
+            // Update progress bar
+            attendanceProgress.style.width = `${percentage}%`;
+            
+            // Set progress bar color based on percentage
+            if (percentage >= 75) {
+                attendanceProgress.className = 'progress-bar bg-success';
+            } else if (percentage >= 50) {
+                attendanceProgress.className = 'progress-bar bg-warning';
+            } else {
+                attendanceProgress.className = 'progress-bar bg-danger';
+            }
+        }
+
+        // Display attendance history
+        function displayAttendanceHistory() {
+            if (!currentStudent) return;
+            
+            const studentId = currentStudent.id;
+            attendanceHistoryBody.innerHTML = '';
+            
+            if (Object.keys(sessions).length === 0) {
+                attendanceHistoryBody.innerHTML = `
+                    <tr>
+                        <td colspan="3" class="text-center text-muted py-4">
+                            <i class="bi bi-calendar-x display-4 d-block mb-2"></i>
+                            No attendance records found.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            // Sort sessions by date (newest first)
+            const sortedDates = Object.keys(sessions).sort((a, b) => new Date(b) - new Date(a));
+            
+            let hasRecords = false;
+            
+            sortedDates.forEach(date => {
+                let status = 'Not Marked';
+                let badgeClass = 'badge bg-secondary';
+                
+                if (attendance[date] && attendance[date][studentId]) {
+                    hasRecords = true;
+                    if (attendance[date][studentId].present) {
+                        status = 'Present';
+                        badgeClass = 'badge present-badge';
+                    } else {
+                        status = 'Absent';
+                        badgeClass = 'badge absent-badge';
+                    }
+                    
+                    const sessionDate = new Date(date);
+                    const dayName = sessionDate.toLocaleDateString('en-US', { weekday: 'long' });
+                    const formattedDate = sessionDate.toLocaleDateString('en-US', { 
+                        year: 'numeric', 
+                        month: 'short', 
+                        day: 'numeric' 
+                    });
+                    
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${formattedDate}</td>
+                        <td>${dayName}</td>
+                        <td><span class="${badgeClass}">${status}</span></td>
+                    `;
+                    attendanceHistoryBody.appendChild(row);
+                }
+            });
+            
+            if (!hasRecords) {
+                attendanceHistoryBody.innerHTML = `
+                    <tr>
+                        <td colspan="3" class="text-center text-muted py-4">
+                            <i class="bi bi-calendar-x display-4 d-block mb-2"></i>
+                            No attendance records found for you.
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+
+        // Display monthly statistics
+        function displayMonthlyStats() {
+            if (!currentStudent) return;
+            
+            const studentId = currentStudent.id;
+            monthlyStats.innerHTML = '';
+            
+            // Group attendance by month
+            const monthlyData = {};
+            
+            for (const date in attendance) {
+                if (attendance[date][studentId]) {
+                    const sessionDate = new Date(date);
+                    const monthYear = sessionDate.toLocaleDateString('en-US', { 
+                        year: 'numeric', 
+                        month: 'long' 
+                    });
+                    
+                    if (!monthlyData[monthYear]) {
+                        monthlyData[monthYear] = {
+                            present: 0,
+                            total: 0
+                        };
+                    }
+                    
+                    monthlyData[monthYear].total++;
+                    if (attendance[date][studentId].present) {
+                        monthlyData[monthYear].present++;
+                    }
+                }
+            }
+            
+            if (Object.keys(monthlyData).length === 0) {
+                monthlyStats.innerHTML = `
+                    <div class="col-12">
+                        <p class="text-muted text-center">No monthly data available.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Sort months (newest first)
+            const sortedMonths = Object.keys(monthlyData).sort((a, b) => {
+                return new Date(b) - new Date(a);
+            });
+            
+            // Display up to 6 recent months
+            const recentMonths = sortedMonths.slice(0, 6);
+            
+            recentMonths.forEach(month => {
+                const data = monthlyData[month];
+                const percentage = data.total > 0 ? Math.round((data.present / data.total) * 100) : 0;
+                
+                let progressColor = 'bg-danger';
+                if (percentage >= 75) progressColor = 'bg-success';
+                else if (percentage >= 50) progressColor = 'bg-warning';
+                
+                const col = document.createElement('div');
+                col.className = 'col-md-6 col-lg-4 mb-3';
+                col.innerHTML = `
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h6 class="card-title">${month}</h6>
+                            <div class="d-flex justify-content-between mb-2">
+                                <small class="text-muted">${data.present}/${data.total} days</small>
+                                <small class="fw-bold">${percentage}%</small>
+                            </div>
+                            <div class="progress" style="height: 8px;">
+                                <div class="progress-bar ${progressColor}" style="width: ${percentage}%"></div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                monthlyStats.appendChild(col);
+            });
+        }
+
+        // Refresh data
+        function refreshData() {
+            loadData();
+            
+            if (currentStudent) {
+                // Show refresh feedback
+                showToast('Data refreshed successfully!', 'info', 2000);
+            }
+        }
+
+        // Logout
+        function logout() {
+            currentStudent = null;
+            sessionStorage.removeItem('studentRollNumber');
+            
+            // Reset form
+            rollNumberForm.reset();
+            
+            // Show login section and hide student details
+            loginSection.style.display = 'block';
+            studentDetails.style.display = 'none';
+            logoutBtn.style.display = 'none';
+            errorMessage.style.display = 'none';
+            
+            showToast('You have been logged out.', 'info');
+        }
+
+        // Show error message
+        function showError(message) {
+            errorText.textContent = message;
+            errorMessage.style.display = 'block';
+            showToast(message, 'error');
+            
+            // Auto hide after 5 seconds
+            setTimeout(() => {
+                errorMessage.style.display = 'none';
+            }, 5000);
+        }
+    </script>
+</body>
+</html>
