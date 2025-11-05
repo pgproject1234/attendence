@@ -1,0 +1,1296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Attendance - Teacher</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+    <!-- Flatpickr for date selection -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <style>
+        .attendance-table th {
+            position: sticky;
+            top: 0;
+            background-color: #f8f9fa;
+            z-index: 10;
+        }
+        .student-card {
+            transition: all 0.3s ease;
+        }
+        .student-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        .attendance-status {
+            cursor: pointer;
+        }
+        .present {
+            background-color: #d4edda;
+        }
+        .absent {
+            background-color: #f8d7da;
+        }
+        .search-highlight {
+            background-color: yellow;
+        }
+        .stats-card {
+            transition: all 0.3s ease;
+        }
+        .stats-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        .login-container {
+            max-width: 400px;
+            margin: 100px auto;
+            padding: 2rem;
+            border-radius: 10px;
+            background: white;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .admin-content {
+            display: none;
+        }
+        .date-input-group {
+            max-width: 300px;
+        }
+        .quick-actions {
+            border-left: 4px solid #0d6efd;
+        }
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+        }
+        .custom-toast {
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            border-left: 5px solid;
+        }
+        .toast-success {
+            border-left-color: #198754;
+        }
+        .toast-error {
+            border-left-color: #dc3545;
+        }
+        .toast-warning {
+            border-left-color: #ffc107;
+        }
+        .toast-info {
+            border-left-color: #0dcaf0;
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Login Section -->
+    <div id="loginSection">
+        <div class="container">
+            <div class="login-container">
+                <div class="text-center mb-4">
+                    <i class="bi bi-shield-lock text-primary" style="font-size: 3rem;"></i>
+                    <h2 class="mt-3">Teacher Login</h2>
+                    <p class="text-muted">Enter password to access teacher panel</p>
+                </div>
+                
+                <form id="loginForm">
+                    <div class="mb-3">
+                        <label for="passwordInput" class="form-label">Password</label>
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i class="bi bi-key"></i>
+                            </span>
+                            <input type="password" class="form-control" id="passwordInput" placeholder="Enter teacher password" required>
+                            <button class="btn btn-outline-secondary" type="button" id="togglePassword">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-box-arrow-in-right me-1"></i>Login
+                        </button>
+                    </div>
+                </form>
+                
+                <div class="mt-3 text-center">
+                    <small class="text-muted">Password: Teacher@123</small>
+                </div>
+
+                <div class="alert alert-danger mt-3" id="loginError" style="display: none;">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    <span id="errorText">Invalid password. Please try again.</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Teacher Content (Hidden until login) -->
+    <div class="admin-content" id="adminContent">
+        <!-- Navigation -->
+        <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+            <div class="container">
+                <a class="navbar-brand" href="#">
+                    <i class="bi bi-person-check-fill me-2"></i>Attendance System - Teacher
+                </a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav ms-auto">
+                        <li class="nav-item">
+                            <a class="nav-link active" href="admin.html">
+                                <i class="bi bi-person-gear me-1"></i>Teacher Panel
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="view_students.html">
+                                <i class="bi bi-eye me-1"></i>Student Portal
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link btn btn-link text-white" id="logoutBtn">
+                                <i class="bi bi-box-arrow-right me-1"></i>Logout
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+
+        <div class="container mt-4">
+            <div class="row">
+                <div class="col-12">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h1 class="h3">
+                            <i class="bi bi-person-gear text-primary me-2"></i>Teacher Panel
+                        </h1>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-outline-danger btn-sm" id="clearAllBtn">
+                                <i class="bi bi-trash me-1"></i>Clear All Data
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats Cards -->
+            <div class="row mb-4">
+                <div class="col-md-3 mb-3">
+                    <div class="card bg-primary text-white stats-card">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h4 class="card-title" id="totalStudents">0</h4>
+                                    <p class="card-text">Total Students</p>
+                                </div>
+                                <div class="align-self-center">
+                                    <i class="bi bi-people-fill fs-1"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="card bg-success text-white stats-card">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h4 class="card-title" id="totalSessions">0</h4>
+                                    <p class="card-text">Total Sessions</p>
+                                </div>
+                                <div class="align-self-center">
+                                    <i class="bi bi-calendar-check fs-1"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="card bg-info text-white stats-card">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h4 class="card-title" id="avgAttendance">0%</h4>
+                                    <p class="card-text">Average Attendance</p>
+                                </div>
+                                <div class="align-self-center">
+                                    <i class="bi bi-graph-up fs-1"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="card bg-warning text-white stats-card">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h4 class="card-title" id="todayDate">-</h4>
+                                    <p class="card-text">Today's Date</p>
+                                </div>
+                                <div class="align-self-center">
+                                    <i class="bi bi-calendar-date fs-1"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <div class="row">
+                <!-- Left Column - Student Management -->
+                <div class="col-lg-4">
+                    <!-- Add Student Card -->
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="card-title mb-0">
+                                <i class="bi bi-person-plus me-1"></i>Add Student
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <form id="addStudentForm">
+                                <div class="mb-3">
+                                    <label for="rollNumber" class="form-label">Roll Number *</label>
+                                    <input type="text" class="form-control" id="rollNumber" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="studentName" class="form-label">Full Name *</label>
+                                    <input type="text" class="form-control" id="studentName" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="className" class="form-label">Class/Branch</label>
+                                    <input type="text" class="form-control" id="className">
+                                </div>
+                                <div class="d-grid">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="bi bi-plus-circle me-1"></i>Add Student
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Quick Actions -->
+                    <div class="card shadow-sm quick-actions">
+                        <div class="card-header bg-secondary text-white">
+                            <h5 class="card-title mb-0">
+                                <i class="bi bi-lightning me-1"></i>Quick Actions
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="d-grid gap-2">
+                                <button class="btn btn-outline-success" id="markAllPresentBtn">
+                                    <i class="bi bi-check-circle me-1"></i>Mark All Present
+                                </button>
+                                <button class="btn btn-outline-danger" id="markAllAbsentBtn">
+                                    <i class="bi bi-x-circle me-1"></i>Mark All Absent
+                                </button>
+                                <button class="btn btn-outline-primary" id="refreshStudentsBtn">
+                                    <i class="bi bi-arrow-clockwise me-1"></i>Refresh List
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Student List -->
+                    <div class="card shadow-sm mt-4">
+                        <div class="card-header bg-info text-white">
+                            <h5 class="card-title mb-0">
+                                <i class="bi bi-people me-1"></i>Student List
+                            </h5>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                                <table class="table table-hover mb-0">
+                                    <thead class="table-light sticky-top">
+                                        <tr>
+                                            <th>Roll No</th>
+                                            <th>Name</th>
+                                            <th>Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="studentList">
+                                        <!-- Student list will be populated here -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column - Attendance -->
+                <div class="col-lg-8">
+                    <!-- Attendance Card -->
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-success text-white">
+                            <h5 class="card-title mb-0">
+                                <i class="bi bi-calendar-check me-1"></i>Take Attendance
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <!-- Date Selection -->
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <label for="attendanceDate" class="form-label">Select Date</label>
+                                    <div class="input-group date-input-group">
+                                        <input type="text" class="form-control" id="attendanceDate" placeholder="Select date">
+                                        <button class="btn btn-outline-secondary" type="button" id="setTodayBtn">
+                                            Today
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 d-flex align-items-end">
+                                    <div class="d-flex gap-2 w-100">
+                                        <button class="btn btn-sm btn-outline-primary" id="checkAttendanceBtn">
+                                            <i class="bi bi-search me-1"></i>Check Date
+                                        </button>
+                                        <button class="btn btn-sm btn-success" id="saveAttendanceBtn">
+                                            <i class="bi bi-check-circle me-1"></i>Save Attendance
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Current Date Display -->
+                            <div class="alert alert-info mb-3" id="currentDateDisplay">
+                                <i class="bi bi-calendar-event me-2"></i>
+                                <strong>Currently viewing:</strong> <span id="displayDate">No date selected</span>
+                            </div>
+
+                            <!-- Search -->
+                            <div class="mb-3">
+                                <input type="text" class="form-control" id="searchRoll" placeholder="Search by roll number or name...">
+                            </div>
+
+                            <!-- Attendance Summary -->
+                            <div class="row mb-3" id="attendanceSummary" style="display: none;">
+                                <div class="col-md-4">
+                                    <div class="card bg-success text-white text-center">
+                                        <div class="card-body py-2">
+                                            <h5 class="card-title mb-0" id="presentCount">0</h5>
+                                            <small>Present</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="card bg-danger text-white text-center">
+                                        <div class="card-body py-2">
+                                            <h5 class="card-title mb-0" id="absentCount">0</h5>
+                                            <small>Absent</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="card bg-info text-white text-center">
+                                        <div class="card-body py-2">
+                                            <h5 class="card-title mb-0" id="totalCount">0</h5>
+                                            <small>Total</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Attendance Table -->
+                            <div class="table-responsive">
+                                <table class="table table-bordered table-hover attendance-table">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th width="15%">Roll No</th>
+                                            <th width="25%">Name</th>
+                                            <th width="20%">Class/Branch</th>
+                                            <th width="40%">Attendance Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="attendanceTableBody">
+                                        <!-- Attendance rows will be populated here -->
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div class="alert alert-info mt-3" id="attendanceMessage" style="display: none;">
+                                <i class="bi bi-info-circle me-2"></i>
+                                <span id="messageText"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Session History -->
+                    <div class="card shadow-sm mt-4">
+                        <div class="card-header bg-warning text-white">
+                            <h5 class="card-title mb-0">
+                                <i class="bi bi-clock-history me-1"></i>Recent Sessions
+                            </h5>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="list-group list-group-flush" id="sessionDatesList" style="max-height: 200px; overflow-y: auto;">
+                                <!-- Session dates will be populated here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Student Modal -->
+    <div class="modal fade" id="editStudentModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit Student</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editStudentForm">
+                        <input type="hidden" id="editStudentId">
+                        <div class="mb-3">
+                            <label for="editRollNumber" class="form-label">Roll Number</label>
+                            <input type="text" class="form-control" id="editRollNumber" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editStudentName" class="form-label">Full Name</label>
+                            <input type="text" class="form-control" id="editStudentName" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editClassName" class="form-label">Class/Branch</label>
+                            <input type="text" class="form-control" id="editClassName">
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="updateStudentBtn">Update</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Flatpickr for date selection -->
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    
+    <!-- Firebase SDK -->
+    <script type="module">
+        // Firebase configuration
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
+        import { getDatabase, ref, set, push, onValue, remove, update, get, child } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDawEjCOeYoFO_vKMWe4HprSC1Aw8LqkD0",
+            authDomain: "attendence-b4514.firebaseapp.com",
+            databaseURL: "https://attendence-b4514-default-rtdb.firebaseio.com",
+            projectId: "attendence-b4514",
+            storageBucket: "attendence-b4514.firebasestorage.app",
+            messagingSenderId: "922020420625",
+            appId: "1:922020420625:web:52452311aad5d8737265b0",
+            measurementId: "G-0L2P4VG6YQ"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const database = getDatabase(app);
+
+        // DOM elements
+        const loginSection = document.getElementById('loginSection');
+        const adminContent = document.getElementById('adminContent');
+        const loginForm = document.getElementById('loginForm');
+        const passwordInput = document.getElementById('passwordInput');
+        const togglePassword = document.getElementById('togglePassword');
+        const loginError = document.getElementById('loginError');
+        const errorText = document.getElementById('errorText');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const toastContainer = document.getElementById('toastContainer');
+
+        // Teacher functionality elements
+        const addStudentForm = document.getElementById('addStudentForm');
+        const studentList = document.getElementById('studentList');
+        const attendanceTableBody = document.getElementById('attendanceTableBody');
+        const saveAttendanceBtn = document.getElementById('saveAttendanceBtn');
+        const refreshStudentsBtn = document.getElementById('refreshStudentsBtn');
+        const clearAllBtn = document.getElementById('clearAllBtn');
+        const searchRoll = document.getElementById('searchRoll');
+        const editStudentModal = new bootstrap.Modal(document.getElementById('editStudentModal'));
+        const editStudentForm = document.getElementById('editStudentForm');
+        const updateStudentBtn = document.getElementById('updateStudentBtn');
+        const attendanceMessage = document.getElementById('attendanceMessage');
+        const messageText = document.getElementById('messageText');
+        const sessionDatesList = document.getElementById('sessionDatesList');
+        const totalStudents = document.getElementById('totalStudents');
+        const totalSessions = document.getElementById('totalSessions');
+        const avgAttendance = document.getElementById('avgAttendance');
+        const todayDateElement = document.getElementById('todayDate');
+        const setTodayBtn = document.getElementById('setTodayBtn');
+        const checkAttendanceBtn = document.getElementById('checkAttendanceBtn');
+        const markAllPresentBtn = document.getElementById('markAllPresentBtn');
+        const markAllAbsentBtn = document.getElementById('markAllAbsentBtn');
+        const currentDateDisplay = document.getElementById('currentDateDisplay');
+        const displayDate = document.getElementById('displayDate');
+        const attendanceSummary = document.getElementById('attendanceSummary');
+        const presentCount = document.getElementById('presentCount');
+        const absentCount = document.getElementById('absentCount');
+        const totalCount = document.getElementById('totalCount');
+
+        // Initialize date picker - NO RESTRICTIONS
+        const attendanceDate = flatpickr("#attendanceDate", {
+            defaultDate: "today",
+            dateFormat: "Y-m-d",
+            allowInput: true,
+            clickOpens: true
+        });
+
+        // Global variables
+        let students = {};
+        let selectedDateAttendance = {};
+        let sessions = {};
+        let attendance = {};
+        let currentSelectedDate = '';
+
+        // Set today's date
+        const today = new Date().toLocaleDateString('en-US', { 
+            year: 'numeric', 
+            month: 'short', 
+            day: 'numeric' 
+        });
+        todayDateElement.textContent = today;
+
+        // Event listeners for login
+        loginForm.addEventListener('submit', handleLogin);
+        togglePassword.addEventListener('click', togglePasswordVisibility);
+        logoutBtn.addEventListener('click', handleLogout);
+        setTodayBtn.addEventListener('click', () => setDateToToday());
+        markAllPresentBtn.addEventListener('click', markAllPresent);
+        markAllAbsentBtn.addEventListener('click', markAllAbsent);
+
+        // Check if already logged in
+        document.addEventListener('DOMContentLoaded', function() {
+            const isLoggedIn = sessionStorage.getItem('teacherLoggedIn');
+            if (isLoggedIn === 'true') {
+                showTeacherContent();
+            }
+        });
+
+        // Show toast notification
+        function showToast(message, type = 'info', duration = 4000) {
+            const toastId = 'toast-' + Date.now();
+            const icon = getToastIcon(type);
+            
+            const toastHTML = `
+                <div id="${toastId}" class="toast custom-toast toast-${type}" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="toast-header">
+                        ${icon}
+                        <strong class="me-auto">${getToastTitle(type)}</strong>
+                        <small>Just now</small>
+                        <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+                    </div>
+                    <div class="toast-body">
+                        ${message}
+                    </div>
+                </div>
+            `;
+            
+            toastContainer.insertAdjacentHTML('beforeend', toastHTML);
+            const toastElement = document.getElementById(toastId);
+            const toast = new bootstrap.Toast(toastElement, {
+                delay: duration,
+                autohide: true
+            });
+            
+            toast.show();
+            
+            // Remove toast from DOM after it's hidden
+            toastElement.addEventListener('hidden.bs.toast', () => {
+                toastElement.remove();
+            });
+        }
+
+        // Get toast icon based on type
+        function getToastIcon(type) {
+            switch(type) {
+                case 'success':
+                    return '<i class="bi bi-check-circle-fill text-success me-2"></i>';
+                case 'error':
+                    return '<i class="bi bi-x-circle-fill text-danger me-2"></i>';
+                case 'warning':
+                    return '<i class="bi bi-exclamation-triangle-fill text-warning me-2"></i>';
+                case 'info':
+                default:
+                    return '<i class="bi bi-info-circle-fill text-info me-2"></i>';
+            }
+        }
+
+        // Get toast title based on type
+        function getToastTitle(type) {
+            switch(type) {
+                case 'success':
+                    return 'Success';
+                case 'error':
+                    return 'Error';
+                case 'warning':
+                    return 'Warning';
+                case 'info':
+                default:
+                    return 'Information';
+            }
+        }
+
+        // Set date to today
+        function setDateToToday() {
+            attendanceDate.setDate(new Date());
+            const todayDate = new Date().toISOString().split('T')[0];
+            checkAttendanceForDate(todayDate);
+        }
+
+        // Mark all students as present
+        function markAllPresent() {
+            Object.keys(students).forEach(id => {
+                const presentRadio = document.getElementById(`present-${id}`);
+                const absentRadio = document.getElementById(`absent-${id}`);
+                if (presentRadio && absentRadio) {
+                    presentRadio.checked = true;
+                    absentRadio.checked = false;
+                }
+            });
+            updateAttendanceSummary();
+            showToast('All students have been marked as present!', 'success');
+        }
+
+        // Mark all students as absent
+        function markAllAbsent() {
+            Object.keys(students).forEach(id => {
+                const presentRadio = document.getElementById(`present-${id}`);
+                const absentRadio = document.getElementById(`absent-${id}`);
+                if (presentRadio && absentRadio) {
+                    presentRadio.checked = false;
+                    absentRadio.checked = true;
+                }
+            });
+            updateAttendanceSummary();
+            showToast('All students have been marked as absent!', 'warning');
+        }
+
+        // Handle login
+        function handleLogin(e) {
+            e.preventDefault();
+            
+            const password = passwordInput.value;
+            const correctPassword = "Teacher@123"; // Teacher password
+            
+            if (password === correctPassword) {
+                sessionStorage.setItem('teacherLoggedIn', 'true');
+                showTeacherContent();
+                showToast('Login successful! Welcome to Teacher Panel.', 'success');
+            } else {
+                showLoginError();
+            }
+        }
+
+        // Toggle password visibility
+        function togglePasswordVisibility() {
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+            
+            // Toggle icon
+            const icon = togglePassword.querySelector('i');
+            if (type === 'password') {
+                icon.className = 'bi bi-eye';
+            } else {
+                icon.className = 'bi bi-eye-slash';
+            }
+        }
+
+        // Show teacher content
+        function showTeacherContent() {
+            loginSection.style.display = 'none';
+            adminContent.style.display = 'block';
+            loadTeacherData();
+        }
+
+        // Show login error
+        function showLoginError() {
+            loginError.style.display = 'block';
+            passwordInput.focus();
+            
+            // Clear password field
+            passwordInput.value = '';
+            showToast('Invalid password. Please try again.', 'error');
+        }
+
+        // Handle logout
+        function handleLogout() {
+            sessionStorage.removeItem('teacherLoggedIn');
+            adminContent.style.display = 'none';
+            loginSection.style.display = 'block';
+            
+            // Clear form
+            loginForm.reset();
+            loginError.style.display = 'none';
+            showToast('You have been logged out successfully.', 'info');
+        }
+
+        // Load teacher data
+        function loadTeacherData() {
+            loadStudents();
+            loadSessions();
+            loadAttendanceData();
+
+            // Set up teacher functionality event listeners
+            addStudentForm.addEventListener('submit', addStudent);
+            saveAttendanceBtn.addEventListener('click', saveAttendance);
+            refreshStudentsBtn.addEventListener('click', loadStudents);
+            clearAllBtn.addEventListener('click', clearAllData);
+            searchRoll.addEventListener('input', filterStudents);
+            updateStudentBtn.addEventListener('click', updateStudent);
+            checkAttendanceBtn.addEventListener('click', () => {
+                const selectedDate = attendanceDate.selectedDates[0] ? 
+                    attendanceDate.selectedDates[0].toISOString().split('T')[0] : 
+                    new Date().toISOString().split('T')[0];
+                checkAttendanceForDate(selectedDate);
+            });
+        }
+
+        // Load attendance data for statistics
+        function loadAttendanceData() {
+            const attendanceRef = ref(database, 'attendance');
+            
+            onValue(attendanceRef, (snapshot) => {
+                attendance = snapshot.val() || {};
+                updateStats();
+            });
+        }
+
+        // Update statistics
+        function updateStats() {
+            // Total students
+            totalStudents.textContent = Object.keys(students).length;
+            
+            // Total sessions
+            totalSessions.textContent = Object.keys(sessions).length;
+            
+            // Calculate average attendance
+            const totalSessionsCount = Object.keys(sessions).length;
+            if (totalSessionsCount === 0) {
+                avgAttendance.textContent = '0%';
+                return;
+            }
+            
+            let totalPresentCount = 0;
+            let totalPossibleAttendance = 0;
+            
+            Object.keys(students).forEach(studentId => {
+                let presentCount = 0;
+                
+                // Count present days for this student
+                Object.keys(attendance).forEach(date => {
+                    if (attendance[date][studentId] && attendance[date][studentId].present) {
+                        presentCount++;
+                    }
+                });
+                
+                totalPresentCount += presentCount;
+                totalPossibleAttendance += totalSessionsCount;
+            });
+            
+            const averagePercentage = totalPossibleAttendance > 0 
+                ? Math.round((totalPresentCount / totalPossibleAttendance) * 100) 
+                : 0;
+                
+            avgAttendance.textContent = `${averagePercentage}%`;
+        }
+
+        // Add student function
+        function addStudent(e) {
+            e.preventDefault();
+            
+            const rollNumber = document.getElementById('rollNumber').value.trim();
+            const studentName = document.getElementById('studentName').value.trim();
+            const className = document.getElementById('className').value.trim();
+            
+            if (!rollNumber || !studentName) {
+                showToast('Roll number and name are required!', 'error');
+                return;
+            }
+            
+            // Check if roll number already exists
+            let exists = false;
+            Object.keys(students).forEach(id => {
+                if (students[id].roll === rollNumber) {
+                    exists = true;
+                }
+            });
+            
+            if (exists) {
+                showToast('Student with this roll number already exists!', 'error');
+                return;
+            }
+            
+            // Add student to database
+            const newStudentRef = push(ref(database, 'students'));
+            set(newStudentRef, {
+                roll: rollNumber,
+                name: studentName,
+                className: className,
+                createdAt: Date.now()
+            }).then(() => {
+                // Clear form
+                addStudentForm.reset();
+                showToast(`Student "${studentName}" added successfully!`, 'success');
+            }).catch(error => {
+                console.error('Error adding student:', error);
+                showToast('Error adding student: ' + error.message, 'error');
+            });
+        }
+
+        // Load students from database
+        function loadStudents() {
+            const studentsRef = ref(database, 'students');
+            
+            onValue(studentsRef, (snapshot) => {
+                students = snapshot.val() || {};
+                renderStudentList();
+                renderAttendanceTable();
+                updateStats();
+            });
+        }
+
+        // Load sessions from database
+        function loadSessions() {
+            const sessionsRef = ref(database, 'sessions');
+            
+            onValue(sessionsRef, (snapshot) => {
+                sessions = snapshot.val() || {};
+                renderSessionDates();
+                updateStats();
+            });
+        }
+
+        // Render student list
+        function renderStudentList() {
+            studentList.innerHTML = '';
+            
+            if (Object.keys(students).length === 0) {
+                studentList.innerHTML = '<tr><td colspan="3" class="text-center text-muted">No students added yet</td></tr>';
+                return;
+            }
+            
+            Object.keys(students).forEach(id => {
+                const student = students[id];
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${escapeHtml(student.roll)}</td>
+                    <td>${escapeHtml(student.name)}</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary edit-student" data-id="${id}">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger delete-student" data-id="${id}">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </td>
+                `;
+                studentList.appendChild(row);
+            });
+            
+            // Add event listeners for edit and delete buttons
+            document.querySelectorAll('.edit-student').forEach(button => {
+                button.addEventListener('click', function() {
+                    const studentId = this.getAttribute('data-id');
+                    editStudent(studentId);
+                });
+            });
+            
+            document.querySelectorAll('.delete-student').forEach(button => {
+                button.addEventListener('click', function() {
+                    const studentId = this.getAttribute('data-id');
+                    deleteStudent(studentId);
+                });
+            });
+        }
+
+        // Render attendance table
+        function renderAttendanceTable() {
+            attendanceTableBody.innerHTML = '';
+            
+            if (Object.keys(students).length === 0) {
+                attendanceTableBody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No students added yet</td></tr>';
+                return;
+            }
+            
+            Object.keys(students).forEach(id => {
+                const student = students[id];
+                const isMarked = selectedDateAttendance[id] !== undefined;
+                const status = isMarked ? (selectedDateAttendance[id].present ? 'present' : 'absent') : '';
+                
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${escapeHtml(student.roll)}</td>
+                    <td>${escapeHtml(student.name)}</td>
+                    <td>${escapeHtml(student.className || 'N/A')}</td>
+                    <td>
+                        <div class="btn-group w-100" role="group">
+                            <input type="radio" class="btn-check" name="attendance-${id}" id="present-${id}" value="present" ${status === 'present' ? 'checked' : ''}>
+                            <label class="btn btn-outline-success attendance-status" for="present-${id}">Present</label>
+                            
+                            <input type="radio" class="btn-check" name="attendance-${id}" id="absent-${id}" value="absent" ${status === 'absent' ? 'checked' : ''}>
+                            <label class="btn btn-outline-danger attendance-status" for="absent-${id}">Absent</label>
+                        </div>
+                    </td>
+                `;
+                attendanceTableBody.appendChild(row);
+            });
+            
+            // Add event listeners for radio buttons to update summary
+            document.querySelectorAll('.btn-check').forEach(radio => {
+                radio.addEventListener('change', updateAttendanceSummary);
+            });
+            
+            updateAttendanceSummary();
+        }
+
+        // Update attendance summary
+        function updateAttendanceSummary() {
+            let present = 0;
+            let absent = 0;
+            let total = 0;
+            
+            Object.keys(students).forEach(id => {
+                const presentRadio = document.getElementById(`present-${id}`);
+                if (presentRadio && presentRadio.checked) {
+                    present++;
+                } else {
+                    absent++;
+                }
+                total++;
+            });
+            
+            presentCount.textContent = present;
+            absentCount.textContent = absent;
+            totalCount.textContent = total;
+            
+            // Show summary if we have students
+            if (total > 0) {
+                attendanceSummary.style.display = 'flex';
+            }
+        }
+
+        // Check attendance for selected date
+        function checkAttendanceForDate(date) {
+            currentSelectedDate = date;
+            displayDate.textContent = formatDisplayDate(date);
+            currentDateDisplay.style.display = 'block';
+            
+            const attendanceRef = ref(database, `attendance/${date}`);
+            
+            get(attendanceRef).then((snapshot) => {
+                selectedDateAttendance = snapshot.val() || {};
+                renderAttendanceTable();
+                showToast(`Attendance loaded for ${formatDisplayDate(date)}`, 'info');
+            }).catch(error => {
+                console.error('Error loading attendance:', error);
+                showToast('Error loading attendance: ' + error.message, 'error');
+            });
+        }
+
+        // Save attendance
+        function saveAttendance() {
+            const selectedDate = attendanceDate.selectedDates[0] ? 
+                attendanceDate.selectedDates[0].toISOString().split('T')[0] : 
+                new Date().toISOString().split('T')[0];
+                
+            const attendanceData = {};
+            let hasChanges = false;
+            
+            Object.keys(students).forEach(id => {
+                const presentRadio = document.getElementById(`present-${id}`);
+                const absentRadio = document.getElementById(`absent-${id}`);
+                
+                // Always save if a selection is made
+                if (presentRadio && absentRadio) {
+                    attendanceData[id] = {
+                        present: presentRadio.checked,
+                        timestamp: Date.now()
+                    };
+                    hasChanges = true;
+                }
+            });
+            
+            if (!hasChanges) {
+                showToast('No changes to save! Please mark attendance for at least one student.', 'warning');
+                return;
+            }
+            
+            // Save to database
+            const todayAttendanceRef = ref(database, `attendance/${selectedDate}`);
+            set(todayAttendanceRef, attendanceData).then(() => {
+                // Update local state immediately
+                selectedDateAttendance = attendanceData;
+                
+                // Show success toast
+                showToast(`Attendance saved successfully for ${formatDisplayDate(selectedDate)}!`, 'success');
+                
+                // Also create/update session record
+                const sessionRef = ref(database, `sessions/${selectedDate}`);
+                set(sessionRef, {
+                    date: selectedDate,
+                    createdAt: Date.now()
+                });
+                
+                // Refresh the session list
+                loadSessions();
+                
+            }).catch(error => {
+                console.error('Error saving attendance:', error);
+                showToast('Error saving attendance: ' + error.message, 'error');
+            });
+        }
+
+        // Render session dates
+        function renderSessionDates() {
+            sessionDatesList.innerHTML = '';
+            
+            if (Object.keys(sessions).length === 0) {
+                sessionDatesList.innerHTML = '<div class="list-group-item text-center text-muted">No sessions recorded yet</div>';
+                return;
+            }
+            
+            // Sort dates in descending order (newest first)
+            const sortedDates = Object.keys(sessions).sort((a, b) => new Date(b) - new Date(a));
+            
+            // Show only recent sessions
+            const recentSessions = sortedDates.slice(0, 10);
+            
+            recentSessions.forEach(date => {
+                const listItem = document.createElement('a');
+                listItem.href = '#';
+                listItem.className = 'list-group-item list-group-item-action session-date';
+                listItem.setAttribute('data-date', date);
+                listItem.innerHTML = `
+                    <div class="d-flex w-100 justify-content-between">
+                        <h6 class="mb-1">${formatDate(date)}</h6>
+                        <small class="text-muted">Click to load</small>
+                    </div>
+                `;
+                
+                listItem.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    attendanceDate.setDate(date);
+                    checkAttendanceForDate(date);
+                });
+                
+                sessionDatesList.appendChild(listItem);
+            });
+        }
+
+        // Edit student
+        function editStudent(studentId) {
+            const student = students[studentId];
+            document.getElementById('editStudentId').value = studentId;
+            document.getElementById('editRollNumber').value = student.roll;
+            document.getElementById('editStudentName').value = student.name;
+            document.getElementById('editClassName').value = student.className || '';
+            editStudentModal.show();
+        }
+
+        // Update student
+        function updateStudent() {
+            const studentId = document.getElementById('editStudentId').value;
+            const rollNumber = document.getElementById('editRollNumber').value.trim();
+            const studentName = document.getElementById('editStudentName').value.trim();
+            const className = document.getElementById('editClassName').value.trim();
+            
+            if (!rollNumber || !studentName) {
+                showToast('Roll number and name are required!', 'error');
+                return;
+            }
+            
+            // Check if roll number already exists (excluding current student)
+            let exists = false;
+            Object.keys(students).forEach(id => {
+                if (id !== studentId && students[id].roll === rollNumber) {
+                    exists = true;
+                }
+            });
+            
+            if (exists) {
+                showToast('Another student with this roll number already exists!', 'error');
+                return;
+            }
+            
+            // Update student in database
+            const studentRef = ref(database, `students/${studentId}`);
+            update(studentRef, {
+                roll: rollNumber,
+                name: studentName,
+                className: className
+            }).then(() => {
+                editStudentModal.hide();
+                showToast(`Student "${studentName}" updated successfully!`, 'success');
+            }).catch(error => {
+                console.error('Error updating student:', error);
+                showToast('Error updating student: ' + error.message, 'error');
+            });
+        }
+
+        // Delete student
+        function deleteStudent(studentId) {
+            const student = students[studentId];
+            if (confirm(`Are you sure you want to delete "${student.name}"? This will also remove all their attendance records.`)) {
+                const studentRef = ref(database, `students/${studentId}`);
+                remove(studentRef).then(() => {
+                    // Also remove student from all attendance records
+                    const attendanceRef = ref(database, 'attendance');
+                    get(attendanceRef).then((snapshot) => {
+                        const allAttendance = snapshot.val() || {};
+                        const updates = {};
+                        
+                        Object.keys(allAttendance).forEach(date => {
+                            if (allAttendance[date][studentId]) {
+                                updates[`attendance/${date}/${studentId}`] = null;
+                            }
+                        });
+                        
+                        if (Object.keys(updates).length > 0) {
+                            update(ref(database), updates);
+                        }
+                    });
+                    
+                    showToast(`Student "${student.name}" deleted successfully!`, 'success');
+                }).catch(error => {
+                    console.error('Error deleting student:', error);
+                    showToast('Error deleting student: ' + error.message, 'error');
+                });
+            }
+        }
+
+        // Clear all data
+        function clearAllData() {
+            if (confirm('Are you sure you want to delete ALL data? This action cannot be undone.')) {
+                const studentsRef = ref(database, 'students');
+                const attendanceRef = ref(database, 'attendance');
+                const sessionsRef = ref(database, 'sessions');
+                
+                Promise.all([
+                    remove(studentsRef),
+                    remove(attendanceRef),
+                    remove(sessionsRef)
+                ]).then(() => {
+                    showToast('All data cleared successfully!', 'success');
+                }).catch(error => {
+                    console.error('Error clearing data:', error);
+                    showToast('Error clearing data: ' + error.message, 'error');
+                });
+            }
+        }
+
+        // Filter students by roll number
+        function filterStudents() {
+            const searchTerm = searchRoll.value.toLowerCase().trim();
+            
+            if (!searchTerm) {
+                // Show all students if search is empty
+                Object.keys(students).forEach(id => {
+                    const student = students[id];
+                    const row = document.querySelector(`input[name="attendance-${id}"]`)?.closest('tr');
+                    if (row) {
+                        row.style.display = '';
+                        
+                        // Remove any existing highlights
+                        const cells = row.querySelectorAll('td');
+                        cells.forEach(cell => {
+                            cell.innerHTML = cell.innerHTML.replace(/<mark class="search-highlight">|<\/mark>/g, '');
+                        });
+                    }
+                });
+                return;
+            }
+            
+            Object.keys(students).forEach(id => {
+                const student = students[id];
+                const row = document.querySelector(`input[name="attendance-${id}"]`)?.closest('tr');
+                
+                if (row && (student.roll.toLowerCase().includes(searchTerm) || 
+                    student.name.toLowerCase().includes(searchTerm))) {
+                    row.style.display = '';
+                    
+                    // Highlight matching text
+                    const rollCell = row.querySelector('td:first-child');
+                    const nameCell = row.querySelector('td:nth-child(2)');
+                    
+                    if (rollCell && nameCell) {
+                        const originalRollText = student.roll;
+                        const originalNameText = student.name;
+                        
+                        const highlightedRollText = originalRollText.replace(
+                            new RegExp(searchTerm, 'gi'),
+                            match => `<mark class="search-highlight">${match}</mark>`
+                        );
+                        
+                        const highlightedNameText = originalNameText.replace(
+                            new RegExp(searchTerm, 'gi'),
+                            match => `<mark class="search-highlight">${match}</mark>`
+                        );
+                        
+                        rollCell.innerHTML = highlightedRollText;
+                        nameCell.innerHTML = highlightedNameText;
+                    }
+                } else if (row) {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        // Helper function to escape HTML
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Helper function to format date for display
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-US', { 
+                weekday: 'short', 
+                year: 'numeric', 
+                month: 'short', 
+                day: 'numeric' 
+            });
+        }
+
+        // Helper function to format date for display in messages
+        function formatDisplayDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-US', { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            });
+        }
+
+        // Add event listener for date change in attendance
+        attendanceDate.config.onChange.push(function(selectedDates) {
+            if (selectedDates.length > 0) {
+                const date = selectedDates[0].toISOString().split('T')[0];
+                checkAttendanceForDate(date);
+            }
+        });
+
+        // Initialize with today's date
+        setTimeout(() => {
+            if (attendanceDate.selectedDates.length > 0) {
+                const date = attendanceDate.selectedDates[0].toISOString().split('T')[0];
+                checkAttendanceForDate(date);
+            }
+        }, 1000);
+    </script>
+</body>
+</html>
